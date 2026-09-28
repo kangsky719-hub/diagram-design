@@ -223,7 +223,7 @@ Two path conventions inside `skills/diagram-design/` exist because a strict bund
 
 - **A repository-checkout helper is written `<repo-root>/scripts/<name>.py`.** The prefix is the deliberate escape hatch; a bare `scripts/<name>.py` claims the skill package ships it, and CI fails because it doesn't.
 - **A variant the package doesn't ship is never spelled as a path.** Describe it ("**Extended, light** — …"), don't name `assets/example-<type>-extended.html`, or the bundler aborts the install looking for a file that was only ever prose.
-- **A dark or full example variant is named without the `assets/` prefix** — `example-<type>-dark.html`, the form SKILL.md's variant table uses. Those two variants are the declared browsing surface: they ship in the repository and are reached through the gallery, but adding the prefix puts them back into every strict install (94 paths, ~1.25 MB) for an inventory bullet. CI reports it (ADR 0010). The light variant keeps its full path, because it *is* a generation input.
+- **A dark or full example variant is named without the `assets/` prefix** — `example-<type>-dark.html`, the form SKILL.md's variant table uses. Those two variants are the declared browsing surface: they ship in the repository and are reached through the gallery, while the prefix would pull 94 paths and ~1.25 MB into the bundle graph for an inventory bullet. CI reports it (ADR 0010). The light variant keeps its full path, because it *is* a generation input. Note what this does and does not buy: Hermes copies only what `SKILL.md` itself references, so it never carried any example variant either way — the graph is a strict superset of that install.
 
 ---
 

@@ -845,8 +845,8 @@ diagram-design/
         "(Codex + Hermes)"
     )
     readme_body = (
-        "## Install\n\n**Hermes:** install the skill directory at "
-        "`~/.agents/skills/diagram-design`.\n\n```\n" + catalog_line + "\n```\n"
+        "## Install\n\n**Hermes:** `hermes skills install diagram-design` lands it in "
+        "`~/.hermes/skills/`.\n\n```\n" + catalog_line + "\n```\n"
     )
 
     def run_hermes_check(readme: str, onboarding: str) -> list[str]:
@@ -860,7 +860,7 @@ diagram-design/
             verify.check_hermes_install_surface(found, root)
             return found
 
-    good_onboarding = "**Hermes:**\n\n1. `~/.agents/skills/<skill-name>/`\n"
+    good_onboarding = "**Hermes:**\n\n1. `~/.hermes/skills/<skill-name>/`\n"
     errors = run_hermes_check(readme_body, good_onboarding)
     if errors:
         raise AssertionError(f"complete Hermes surfaces failed: {errors}")
@@ -873,7 +873,7 @@ diagram-design/
         raise AssertionError(f"missing Hermes install section not reported: {errors}")
 
     errors = run_hermes_check(
-        readme_body.replace("`~/.agents/skills/diagram-design`", "somewhere"),
+        readme_body.replace("`~/.hermes/skills/`", "somewhere"),
         good_onboarding,
     )
     if len(errors) != 1 or "skill root it installs into" not in errors[0]:

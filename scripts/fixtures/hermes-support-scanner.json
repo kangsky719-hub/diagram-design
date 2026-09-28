@@ -5,9 +5,17 @@
     "the upstream scanner changes, re-mirror the regex, update these cases, and",
     "move mirrored_on — all in one commit. test-verify-docs-sync.py fails when",
     "the regex and these cases disagree, which is the only signal this",
-    "repository gets that the mirror still matches the host it claims to mirror."
+    "repository gets that the mirror still matches the host it claims to mirror.",
+    "",
+    "Verified against NousResearch's documentation and issue tracker in 09/2026:",
+    "a GitHub or tap install copies 'SKILL.md plus the exact local files it",
+    "references under references/, templates/, scripts/, assets/, and examples/',",
+    "and 'unreferenced repository files are not copied'. Upstream extracts those",
+    "references from SKILL.md ONLY (_referenced_support_paths); this repository's",
+    "closure check walks packaged Markdown transitively, so it is a strict",
+    "superset of the host. See ADR 0010."
   ],
-  "source": "Hermes Agent strict skill bundler — support-file scanner",
+  "source": "Hermes Agent (NousResearch) skills installer — _referenced_support_paths in tools/skills_hub_models.py",
   "mirrored_on": "2026-09-28",
   "mirror": "scripts/verify-docs-sync.py :: SCANNER_VISIBLE_SUPPORT_REFERENCE",
   "adr": "docs/adr/0010-hermes-agent-rides-the-agent-skills-contract.md",
@@ -15,57 +23,79 @@
     {
       "name": "markdown link",
       "markdown": "See [the guide](references/style-guide.md) first.",
-      "visible": ["references/style-guide.md"]
+      "visible": [
+        "references/style-guide.md"
+      ]
     },
     {
       "name": "markdown link with anchor",
       "markdown": "See [sizing](references/export.md#sizing-the-export).",
-      "visible": ["references/export.md"]
+      "visible": [
+        "references/export.md"
+      ]
     },
     {
       "name": "code span",
       "markdown": "Copy `assets/template-motion.html` verbatim.",
-      "visible": ["assets/template-motion.html"]
+      "visible": [
+        "assets/template-motion.html"
+      ]
     },
     {
       "name": "bare path in prose",
       "markdown": "Run the packaged scripts/self_check.py checker.",
-      "visible": ["scripts/self_check.py"]
+      "visible": [
+        "scripts/self_check.py"
+      ]
     },
     {
       "name": "path at line start",
       "markdown": "assets/template.html is the default scaffold.",
-      "visible": ["assets/template.html"]
+      "visible": [
+        "assets/template.html"
+      ]
     },
     {
       "name": "double-quoted path",
       "markdown": "Open \"references/profiles.md\" and read the marker contract.",
-      "visible": ["references/profiles.md"]
+      "visible": [
+        "references/profiles.md"
+      ]
     },
     {
       "name": "trailing sentence punctuation is not part of the path",
       "markdown": "Everything lives in references/onboarding.md.",
-      "visible": ["references/onboarding.md"]
+      "visible": [
+        "references/onboarding.md"
+      ]
     },
     {
       "name": "query string is stripped",
       "markdown": "Fetch `assets/index.html?tab=line` from the gallery.",
-      "visible": ["assets/index.html"]
+      "visible": [
+        "assets/index.html"
+      ]
     },
     {
       "name": "backslash paths normalize to forward slashes",
       "markdown": "Windows prose names references\\export.md the same way.",
-      "visible": ["references/export.md"]
+      "visible": [
+        "references/export.md"
+      ]
     },
     {
       "name": "percent-encoded traversal stays visible so it can be rejected",
       "markdown": "A link to [x](references/%2e%2e/secrets.md) must be seen.",
-      "visible": ["references/../secrets.md"]
+      "visible": [
+        "references/../secrets.md"
+      ]
     },
     {
       "name": "glob placeholder stays visible so it can be rejected",
       "markdown": "Load `references/type-*.md` when a type is chosen.",
-      "visible": ["references/type-*.md"]
+      "visible": [
+        "references/type-*.md"
+      ]
     },
     {
       "name": "repo-root prefix is the deliberate escape hatch",
@@ -77,5 +107,17 @@
       "markdown": "See [ADR 0008](docs/adr/0008-native-host-manifests-share-one-plugin-root.md).",
       "visible": []
     }
-  ]
+  ],
+  "upstream": {
+    "project": "NousResearch/hermes-agent",
+    "scan_scope": "SKILL.md only, not transitive",
+    "support_directories": [
+      "references",
+      "templates",
+      "scripts",
+      "assets",
+      "examples"
+    ],
+    "known_limitation": "bare-URL install fetches SKILL.md alone (upstream issue #35125)"
+  }
 }

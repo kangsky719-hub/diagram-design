@@ -157,13 +157,24 @@ Kiro copies imported skills into `.kiro/skills/` for a workspace or `~/.kiro/ski
 
 **OpenCode:** Copy or symlink `skills/diagram-design/` to `.opencode/skills/diagram-design` in a project or `~/.config/opencode/skills/diagram-design` globally. OpenCode has no Diagram Design marketplace package; copied installs update only when you replace the directory from a newer checkout.
 
-**Hermes:** Hermes Agent reads the shared Agent Skills convention rather than a marketplace package, so install the skill directory itself at:
+**Hermes:** Hermes Agent (NousResearch) installs skills from a *tap* — a GitHub repository whose skills live one directory each under `skills/`, which is exactly this repository's layout:
 
-```text
-~/.agents/skills/diagram-design
+```bash
+hermes skills tap add cathrynlavery/diagram-design
+hermes skills install diagram-design
 ```
 
-Copy or symlink `skills/diagram-design/` there — the [editable install](#editable-install) block below already creates exactly that link. Hermes bundles *strictly*: it scans the packaged Markdown and fetches every support path it finds **before** installing any part of the skill, so one reference to a file the package does not ship aborts the whole install. `python3 scripts/verify-docs-sync.py` gates that graph in CI in both directions — every path reachable from `SKILL.md` exists, and every shipped support file is reachable — which is what keeps a Hermes install from failing halfway. Because what the packaged Markdown names *is* what a strict bundler fetches, the skill declares a browsing surface that stays out of that graph: a strict install is **117 paths / 1.53 MB** rather than 211 / 2.78 MB, carrying every type's light example but not its dark and full variants, which are a gallery surface rather than a generation input. A copy or symlink install still ships all three. There is no Hermes marketplace package, so a copied install updates when you replace the directory from a newer checkout, and a symlinked checkout updates with `git pull`.
+Or install it directly without registering the tap:
+
+```bash
+hermes skills install cathrynlavery/diagram-design/skills/diagram-design
+```
+
+Skills land in `~/.hermes/skills/`, Hermes's primary skills directory; it also scans project-local `.hermes/skills/` and `.agents/skills/`, and picks up `~/.agents/skills` only when that path is listed under `skills.external_dirs` in `~/.hermes/config.yaml`. Fetch merged updates with `hermes skills check` and `hermes skills update diagram-design`. Hub installs pass through Hermes's security scanner, which records the source, content hash and findings in `~/.hermes/skills/.hub/lock.json`.
+
+**What a Hermes install carries.** Hermes copies `SKILL.md` plus the support files `SKILL.md` itself references, and leaves unreferenced repository files behind — so the install is **62 files / 861 KB**: every one of the 52 references, the five templates, the icon specimen and the three packaged scripts. The 54 example diagrams and the gallery are *not* copied, because only the type references name them; on Hermes the skill is driven by its layout contracts rather than by worked examples. `python3 scripts/verify-docs-sync.py` gates that graph so a referenced file is never missing, which is what keeps an install from aborting halfway. Prefer the tap or GitHub form above over `hermes skills install <URL>`: a bare-URL install currently fetches `SKILL.md` alone (upstream issue #35125), which would leave every reference behind.
+
+Skills reach the Telegram bot the same way they reach any other Hermes surface — installed skills are available to the agent, and skill commands appear in the Telegram command menu.
 
 > **One-time migration:** an existing standalone `npx skills add` copy will not start following the Codex marketplace automatically. Remove that standalone copy, then use the Codex marketplace commands above. Likewise, uninstall a personal Cowork copy and reinstall Diagram Design from your organization's marketplace. Future marketplace version bumps then flow through each client's native update path.
 

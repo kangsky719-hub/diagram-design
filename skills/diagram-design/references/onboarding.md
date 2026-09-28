@@ -227,8 +227,9 @@ Use the installed-skill location exposed by the current agent when available. Ot
 
 **Hermes:**
 
-1. The skill root exposed by the active Hermes bundle
-2. `~/.agents/skills/<skill-name>/` (user install or editable-clone link)
+1. `~/.hermes/skills/<skill-name>/` (the primary skills directory)
+2. `.hermes/skills/<skill-name>/` or `.agents/skills/<skill-name>/` from the project root
+3. `~/.agents/skills/<skill-name>/`, but only when that path is listed under `skills.external_dirs` in `~/.hermes/config.yaml`
 
 **GitHub Copilot:**
 

@@ -76,11 +76,26 @@ SUPPORT_DIRECTORIES = frozenset(
 # input/output pairs the mirror must reproduce, and test-verify-docs-sync.py
 # fails when regex and fixture disagree. Re-mirror deliberately: change the
 # regex, the fixture, and MIRRORED_ON in one commit.
-SCANNER_MIRROR_SOURCE = "Hermes Agent strict skill bundler — support-file scanner"
+#
+# Two ways this mirror is deliberately STRICTER than the host it mirrors, both
+# verified against NousResearch's documentation and issue tracker in 09/2026:
+#   - Upstream extracts references from SKILL.md only; check_support_reference_
+#     closure walks packaged Markdown transitively. A file this gate accepts may
+#     therefore still be absent from a Hermes install (see ADR 0010).
+#   - A bare-URL install currently fetches SKILL.md alone (upstream issue
+#     #35125), so a tap or GitHub install is the supported path for this
+#     multi-file skill.
+SCANNER_MIRROR_SOURCE = (
+    "Hermes Agent (NousResearch) skills installer — "
+    "_referenced_support_paths in tools/skills_hub_models.py"
+)
 SCANNER_MIRROR_MIRRORED_ON = "2026-09-28"
 SCANNER_MIRROR_FIXTURE = ROOT / "scripts/fixtures/hermes-support-scanner.json"
-# The cross-host Agent Skills root Hermes and its siblings resolve.
-AGENT_SKILLS_ROOT = "~/.agents/skills"
+# Hermes Agent's primary skills directory, per NousResearch's own docs. It also
+# scans project-local .hermes/skills and .agents/skills, and honours
+# ~/.agents/skills only when it is listed under skills.external_dirs in
+# ~/.hermes/config.yaml — so the install section must name this one.
+HERMES_SKILLS_ROOT = "~/.hermes/skills"
 # One file, more than one consumer: Codex and Hermes both read it.
 SHARED_AGENTS_CATALOG = ".agents/plugins/marketplace.json"
 # A path written as `<repo-root>/scripts/...` stays deliberately invisible to
@@ -549,9 +564,9 @@ def check_hermes_install_surface(errors: list[str], root: Path) -> None:
             "README.md has no Hermes install section, but Hermes Agent's strict "
             "bundler gates the package (see check_packaged_support_references)"
         )
-    elif AGENT_SKILLS_ROOT not in readme:
+    elif HERMES_SKILLS_ROOT not in readme:
         errors.append(
-            f"README.md's Hermes install section must name the {AGENT_SKILLS_ROOT} "
+            f"README.md's Hermes install section must name the {HERMES_SKILLS_ROOT} "
             "skill root it installs into"
         )
     catalog_line = next(
