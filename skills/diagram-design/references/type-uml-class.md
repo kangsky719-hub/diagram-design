@@ -61,5 +61,5 @@ Seven is the ceiling rather than the target. Three compartments per box makes a 
 ## Examples
 
 - `assets/example-uml-class.html` — minimal light
-- `example-uml-class-dark.html` — minimal dark
-- `example-uml-class-full.html` — full editorial
+- `assets/example-uml-class-dark.html` — minimal dark
+- `assets/example-uml-class-full.html` — full editorial

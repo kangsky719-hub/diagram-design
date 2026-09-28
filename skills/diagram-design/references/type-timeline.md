@@ -16,5 +16,5 @@
 
 ## Examples
 - `assets/example-timeline.html` — minimal light
-- `example-timeline-dark.html` — minimal dark
-- `example-timeline-full.html` — full editorial
+- `assets/example-timeline-dark.html` — minimal dark
+- `assets/example-timeline-full.html` — full editorial

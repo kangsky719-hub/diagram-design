@@ -161,7 +161,7 @@ Write the new tokens to `style-guide.md`. Suggest running the `/regenerate-examp
 
 After onboarding, the user should:
 
-1. Open `assets/index.html` (gallery) and confirm the new palette feels coherent across all 39 types. A strict-bundler install carries only the light tabs — the dark and full variants ship with a copy or symlink install, and the hosted gallery always has all three — so judge those two skins from `assets/template-dark.html` and `assets/template-full.html` instead.
+1. Open `assets/index.html` (gallery) and confirm the new palette feels coherent across all 39 types.
 2. If any type looks off, they usually need to tune `muted` (often too dark or too light against the new `paper`).
 
 ---

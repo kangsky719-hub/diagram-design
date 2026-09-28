@@ -394,8 +394,8 @@ Before emitting SVG, verify **every** item:
 ## 9. Examples
 
 - `assets/example-it-state.html` — minimal light (NatStat canonical: 3 zones, 9 components, 8 connectors, 0 footer bars, SQL Server tinted olive). Gallery default.
-- `example-it-state-dark.html` — same, dark skin.
-- `example-it-state-full.html` — same, editorial-card frame with summary cards.
+- `assets/example-it-state-dark.html` — same, dark skin.
+- `assets/example-it-state-full.html` — same, editorial-card frame with summary cards.
 
 The **extended pattern** is documented here, not shipped as a file: produce it from this reference rather than looking for it in `assets/`.
 

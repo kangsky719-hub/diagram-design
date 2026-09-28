@@ -22,5 +22,5 @@
 
 ## Examples
 - `assets/example-venn.html` — minimal light
-- `example-venn-dark.html` — minimal dark
-- `example-venn-full.html` — full editorial
+- `assets/example-venn-dark.html` — minimal dark
+- `assets/example-venn-full.html` — full editorial

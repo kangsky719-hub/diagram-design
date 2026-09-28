@@ -49,5 +49,5 @@ Max 6 stages · max 3 content rows · 5 sentiment levels (ordinal, named — nev
 ## Examples
 
 - `assets/example-journey.html` — minimal light. *Trial to paid: the first week*, 5 stages, trough at "Hit the limit".
-- `example-journey-dark.html` — minimal dark, same data.
-- `example-journey-full.html` — full editorial: container framing + 3 varied-width summary cards + footer.
+- `assets/example-journey-dark.html` — minimal dark, same data.
+- `assets/example-journey-full.html` — full editorial: container framing + 3 varied-width summary cards + footer.

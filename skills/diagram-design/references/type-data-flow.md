@@ -367,8 +367,8 @@ Above 4 lanes or 6 steps: split into two diagrams (e.g., ingestion pipeline / an
 ## 12. Examples
 
 - `assets/example-data-flow.html` — minimal light (the platform, 4-role × 5-step: Admin, Engineers, Scientists, Consumers). Gallery default.
-- `example-data-flow-dark.html` — same, dark skin.
-- `example-data-flow-full.html` — same, editorial-card frame.
+- `assets/example-data-flow-dark.html` — same, dark skin.
+- `assets/example-data-flow-full.html` — same, editorial-card frame.
 
 The **extended pattern** is documented here, not shipped as a file: produce it from this reference rather than looking for it in `assets/`.
 

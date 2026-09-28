@@ -18,5 +18,5 @@
 
 ## Examples
 - `assets/example-nested.html` — minimal light
-- `example-nested-dark.html` — minimal dark
-- `example-nested-full.html` — full editorial
+- `assets/example-nested-dark.html` — minimal dark
+- `assets/example-nested-full.html` — full editorial

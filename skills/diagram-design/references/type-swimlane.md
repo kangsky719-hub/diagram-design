@@ -16,5 +16,5 @@
 
 ## Examples
 - `assets/example-swimlane.html` — minimal light
-- `example-swimlane-dark.html` — minimal dark
-- `example-swimlane-full.html` — full editorial
+- `assets/example-swimlane-dark.html` — minimal dark
+- `assets/example-swimlane-full.html` — full editorial

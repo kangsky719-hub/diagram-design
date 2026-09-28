@@ -22,5 +22,5 @@
 
 ## Examples
 - `assets/example-layers.html` — minimal light
-- `example-layers-dark.html` — minimal dark
-- `example-layers-full.html` — full editorial
+- `assets/example-layers-dark.html` — minimal dark
+- `assets/example-layers-full.html` — full editorial
