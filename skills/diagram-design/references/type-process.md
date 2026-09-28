@@ -388,9 +388,9 @@ Above 6 lanes or 12 steps: split into two diagrams (overview + detail).
 
 ---
 
-## 12. Worked example — full YAML for `example-process-extended.html`
+## 12. Worked example — full YAML for the extended process variant
 
-The extended example diagram is fully described by the following inputs. Every coordinate in the rendered SVG is derivable from this block via §2 + §3 + §4. This is the canonical proof that the parametric contract works end-to-end.
+The extended variant is fully described by the following inputs. Every coordinate in the rendered SVG is derivable from this block via §2 + §3 + §4. This is the canonical proof that the parametric contract works end-to-end.
 
 ```yaml
 # Quarterly survey — end-to-end workflow (extended variant)
@@ -490,6 +490,8 @@ Everything else — viewBox sizing, chip positions, legend layout, dark-mode tok
 - `assets/example-process.html` — minimal light (quarterly survey: 11 steps, 6 divisions, data-type chips). Gallery default.
 - `assets/example-process-dark.html` — same, dark skin.
 - `assets/example-process-full.html` — same, editorial-card frame.
-- `assets/example-process-extended.html` — exercises §4 color override: Build app in slate-blue (data quality), Train enumerators in rust-red (governance), Publish results in olive-green (data products). Focal accent on Pilot test step + node unchanged.
-- `assets/example-process-extended-dark.html` — extended pattern, dark skin.
-- `assets/example-process-extended-full.html` — extended pattern, editorial-card frame.
+
+The **extended pattern** is documented here, not shipped as a file: produce it from this reference rather than looking for it in `assets/`.
+
+- **Extended, light** — exercises §4 color override: Build app in slate-blue (data quality), Train enumerators in rust-red (governance), Publish results in olive-green (data products). Focal accent on Pilot test step + node unchanged.
+- **Extended, dark skin** and **extended, editorial-card frame** — the same overrides on the dark and full scaffolds.

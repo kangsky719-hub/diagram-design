@@ -67,26 +67,43 @@ FACTORY_MARKETPLACE = Path(".factory-plugin/marketplace.json")
 SUPPORT_DIRECTORIES = frozenset(
     {"references", "templates", "scripts", "assets", "examples"}
 )
-# Mirrors Hermes Agent's support-file scanner. It intentionally sees Markdown
-# links, code spans, and path-like prose because strict bundlers may require
-# every extracted path before they install any part of the skill.
+# Mirrors Hermes Agent's support-file scanner (ADR 0010). It intentionally sees
+# Markdown links, code spans, and path-like prose because strict bundlers may
+# require every extracted path before they install any part of the skill.
+#
+# This is a hand-maintained mirror of an upstream behavior, so it carries
+# provenance instead of drifting silently. SCANNER_MIRROR_FIXTURE pins the
+# input/output pairs the mirror must reproduce, and test-verify-docs-sync.py
+# fails when regex and fixture disagree. Re-mirror deliberately: change the
+# regex, the fixture, and MIRRORED_ON in one commit.
+SCANNER_MIRROR_SOURCE = "Hermes Agent strict skill bundler — support-file scanner"
+SCANNER_MIRROR_MIRRORED_ON = "2026-09-28"
+SCANNER_MIRROR_FIXTURE = ROOT / "scripts/fixtures/hermes-support-scanner.json"
+# The cross-host Agent Skills root Hermes and its siblings resolve.
+AGENT_SKILLS_ROOT = "~/.agents/skills"
+# One file, more than one consumer: Codex and Hermes both read it.
+SHARED_AGENTS_CATALOG = ".agents/plugins/marketplace.json"
+# A path written as `<repo-root>/scripts/...` stays deliberately invisible to
+# this regex: it names a repository-checkout helper, not a packaged file.
 SCANNER_VISIBLE_SUPPORT_REFERENCE = re.compile(
     r"(?:\]\(|`|(?:^|[\s\"']))"
     r"((?:references|templates|scripts|assets|examples)/[^\s)`\"'<>]+)",
     re.MULTILINE,
 )
-REQUIRED_PACKAGED_RUNTIME_FILES = frozenset(
-    {
-        "scripts/self_check.py",
-        "scripts/drawio_extract.py",
-        "scripts/mermaid_extract.py",
-        "assets/template.html",
-        "assets/template-dark.html",
-        "assets/template-full.html",
-        "assets/template-motion.html",
-        "assets/template-terminal.html",
-    }
-)
+# Runtime files are derived from the package rather than hand-listed. A helper
+# or scaffold the installed skill executes or copies has to be named in
+# SKILL.md, or a strict bundler never fetches it — and a hand-maintained
+# frozenset silently stops covering whatever was added after it was written.
+RUNTIME_FILE_PATTERNS = ("scripts/*.py", "assets/template*.html")
+# Exemptions are explicit and explained. Empty today; add an entry only when a
+# runtime file genuinely must stay out of SKILL.md's prose, with the reason.
+RUNTIME_EXPOSURE_EXEMPTIONS: frozenset[str] = frozenset()
+# Build artifacts are not shipped files, so they are not part of the bundle
+# graph. These mirror .gitignore: running any packaged script leaves a
+# __pycache__ behind, and a gate that called that an unshipped orphan would
+# fail depending on which step ran first.
+UNSHIPPED_ARTIFACT_DIRECTORIES = frozenset({"__pycache__"})
+UNSHIPPED_ARTIFACT_SUFFIXES = (".pyc", ".pyo", ".pyd")
 
 
 def normalized(text: str) -> str:
@@ -296,32 +313,238 @@ def scanner_visible_support_references(markdown: str) -> list[str]:
     return sorted(references)
 
 
+def packaged_support_path(skill_directory: Path, target: str) -> Path | None:
+    """Resolve a scanner-visible path inside the package, or None if unsafe."""
+    normalized_target = target.replace("\\", "/")
+    path = PurePosixPath(normalized_target)
+    parts = [part for part in path.parts if part not in {"", "."}]
+    if (
+        not parts
+        or parts[0] not in SUPPORT_DIRECTORIES
+        or normalized_target.startswith("/")
+        or path.is_absolute()
+        or any(part == ".." or ":" in part for part in parts)
+    ):
+        return None
+    return skill_directory / "/".join(parts)
+
+
+def packaged_runtime_files(skill_directory: Path) -> frozenset[str]:
+    """Runtime files the package ships, read off disk instead of hand-listed."""
+    found: set[str] = set()
+    for pattern in RUNTIME_FILE_PATTERNS:
+        for path in skill_directory.glob(pattern):
+            if path.is_file():
+                found.add(path.relative_to(skill_directory).as_posix())
+    return frozenset(found - RUNTIME_EXPOSURE_EXEMPTIONS)
+
+
+def packaged_support_files(skill_directory: Path) -> set[str]:
+    """Every support file the package actually ships, build artifacts aside."""
+    found: set[str] = set()
+    for directory in sorted(SUPPORT_DIRECTORIES):
+        base = skill_directory / directory
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(skill_directory)
+            if UNSHIPPED_ARTIFACT_DIRECTORIES.intersection(relative.parts):
+                continue
+            if relative.suffix in UNSHIPPED_ARTIFACT_SUFFIXES:
+                continue
+            found.add(relative.as_posix())
+    return found
+
+
+def support_reference_closure(
+    skill_directory: Path, markdown: str
+) -> dict[str, list[str]]:
+    """Map every transitively scanner-visible support path to its referrers.
+
+    A strict bundler does not stop at SKILL.md. Each Markdown support file it
+    installs is scanned in turn, so a path named only by ``references/foo.md``
+    is still requested at install time — and a file no scanned Markdown names
+    is never requested at all. Only Markdown is walked, because Markdown is
+    what the mirrored scanner reads.
+    """
+    referrers: dict[str, list[str]] = {}
+    scanned: set[str] = set()
+    queue: list[tuple[str, str]] = [("SKILL.md", markdown)]
+    while queue:
+        origin, source = queue.pop(0)
+        if origin in scanned:
+            continue
+        scanned.add(origin)
+        for target in scanner_visible_support_references(source):
+            sources = referrers.setdefault(target, [])
+            if origin not in sources:
+                sources.append(origin)
+            if not target.endswith(".md") or target in scanned:
+                continue
+            path = packaged_support_path(skill_directory, target)
+            if path is not None and path.is_file():
+                queue.append((target, path.read_text(encoding="utf-8")))
+    return referrers
+
+
 def check_packaged_support_references(
     errors: list[str], markdown: str, skill_directory: Path
 ) -> None:
     """Require every scanner-visible path to be a safe, packaged file."""
     scanner_references = scanner_visible_support_references(markdown)
     for target in scanner_references:
-        normalized_target = target.replace("\\", "/")
-        path = PurePosixPath(normalized_target)
-        parts = [part for part in path.parts if part not in {"", "."}]
-        if (
-            not parts
-            or parts[0] not in SUPPORT_DIRECTORIES
-            or normalized_target.startswith("/")
-            or path.is_absolute()
-            or any(part == ".." or ":" in part for part in parts)
-        ):
+        path = packaged_support_path(skill_directory, target)
+        if path is None:
             errors.append(f"SKILL.md exposes unsafe packaged support path {target!r}")
-        elif not (skill_directory / "/".join(parts)).is_file():
+        elif not path.is_file():
             errors.append(
                 f"SKILL.md exposes missing packaged support file {target!r}; "
                 "strict skill bundlers will abort installation"
             )
-    for target in sorted(REQUIRED_PACKAGED_RUNTIME_FILES - set(scanner_references)):
+    required = packaged_runtime_files(skill_directory)
+    for target in sorted(required - set(scanner_references)):
         errors.append(
             f"SKILL.md does not expose required packaged runtime file {target!r}; "
             "strict skill bundlers will omit it"
+        )
+
+
+def check_support_reference_closure(
+    errors: list[str], skill_directory: Path, markdown: str
+) -> None:
+    """Gate the whole bundle graph in both directions.
+
+    Forward: a path named by any scanned Markdown file must be a safe, packaged
+    file, or a strict bundler aborts partway through installation. Backward: a
+    packaged support file no scanned Markdown names is dead weight the bundler
+    never fetches, so the installed skill silently loses it.
+    """
+    referrers = support_reference_closure(skill_directory, markdown)
+    direct = set(scanner_visible_support_references(markdown))
+    for target, sources in sorted(referrers.items()):
+        if target in direct:
+            continue  # check_packaged_support_references owns SKILL.md's level
+        origin = sources[0]
+        path = packaged_support_path(skill_directory, target)
+        if path is None:
+            errors.append(
+                f"{origin} exposes unsafe packaged support path {target!r}"
+            )
+        elif not path.is_file():
+            errors.append(
+                f"{origin} exposes missing packaged support file {target!r}; "
+                "strict skill bundlers scan installed Markdown too and will "
+                "abort installation"
+            )
+    unreachable = packaged_support_files(skill_directory) - set(referrers)
+    for target in sorted(unreachable):
+        errors.append(
+            f"packaged support file {target!r} is unreachable from SKILL.md; "
+            "a strict bundler installs only what it can scan, so reference it "
+            "from SKILL.md or a reference it reaches, or stop shipping it"
+        )
+
+
+# Published for callers and tests; derived from the packaged tree above.
+REQUIRED_PACKAGED_RUNTIME_FILES = packaged_runtime_files(SKILL.parent)
+
+
+def check_scanner_mirror_fixture(errors: list[str]) -> None:
+    """The mirrored scanner must still reproduce its pinned behavior.
+
+    SCANNER_VISIBLE_SUPPORT_REFERENCE is a hand-copy of an upstream bundler's
+    scanner, so nothing but this fixture notices when the copy and the pinned
+    cases part ways. A fixture without provenance is no pin at all, so the
+    source and the mirroring date are required too.
+    """
+    if not SCANNER_MIRROR_FIXTURE.is_file():
+        try:
+            shown = SCANNER_MIRROR_FIXTURE.relative_to(ROOT).as_posix()
+        except ValueError:  # a fixture path outside the repository, e.g. in tests
+            shown = SCANNER_MIRROR_FIXTURE.as_posix()
+        errors.append(f"scanner mirror fixture is missing: {shown}")
+        return
+    try:
+        fixture = json.loads(SCANNER_MIRROR_FIXTURE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"scanner mirror fixture is not valid JSON: {exc}")
+        return
+    for field, expected in (
+        ("source", SCANNER_MIRROR_SOURCE),
+        ("mirrored_on", SCANNER_MIRROR_MIRRORED_ON),
+    ):
+        if fixture.get(field) != expected:
+            errors.append(
+                f"scanner mirror fixture {field!r} is {fixture.get(field)!r} but "
+                f"verify-docs-sync.py declares {expected!r}; re-mirror both together"
+            )
+    cases = fixture.get("cases")
+    if not isinstance(cases, list) or not cases:
+        errors.append("scanner mirror fixture must carry a non-empty 'cases' array")
+        return
+    for index, case in enumerate(cases):
+        name = case.get("name", f"case {index}") if isinstance(case, dict) else index
+        if not isinstance(case, dict) or "markdown" not in case or "visible" not in case:
+            errors.append(
+                f"scanner mirror fixture case {name!r} needs 'markdown' and 'visible'"
+            )
+            continue
+        actual = scanner_visible_support_references(case["markdown"])
+        expected_visible = sorted(case["visible"])
+        if actual != expected_visible:
+            errors.append(
+                f"scanner mirror drifted from the fixture on {name!r}: "
+                f"expected {expected_visible}, extracted {actual}"
+            )
+
+
+def check_hermes_install_surface(errors: list[str], root: Path) -> None:
+    """Hermes constrains CI, so it must also have a documented install path.
+
+    The strict-bundler gate above exists for Hermes Agent. A host that shapes
+    the package but appears in no install section and no skill-root resolution
+    list is a constraint nobody can act on, so both surfaces are required.
+    """
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    if "**Hermes" not in readme:
+        errors.append(
+            "README.md has no Hermes install section, but Hermes Agent's strict "
+            "bundler gates the package (see check_packaged_support_references)"
+        )
+    elif AGENT_SKILLS_ROOT not in readme:
+        errors.append(
+            f"README.md's Hermes install section must name the {AGENT_SKILLS_ROOT} "
+            "skill root it installs into"
+        )
+    catalog_line = next(
+        (
+            line
+            for line in readme.splitlines()
+            if SHARED_AGENTS_CATALOG in line and "—" in line
+        ),
+        None,
+    )
+    if catalog_line is None:
+        errors.append(
+            f"README architecture tree does not describe {SHARED_AGENTS_CATALOG}"
+        )
+    else:
+        for host in ("Codex", "Hermes"):
+            if host not in catalog_line:
+                errors.append(
+                    f"README describes {SHARED_AGENTS_CATALOG} without naming "
+                    f"{host}; the catalog has more than one consumer, and calling "
+                    "it one host's file is how an edit for that host silently "
+                    "changes another's install"
+                )
+    onboarding_path = root / "skills/diagram-design/references/onboarding.md"
+    onboarding = onboarding_path.read_text(encoding="utf-8")
+    if "**Hermes" not in onboarding:
+        errors.append(
+            "onboarding.md resolves skill roots per host but omits Hermes; an "
+            "installed Hermes skill cannot find a sibling design-system skill"
         )
 
 
@@ -551,6 +774,11 @@ def main() -> int:
         SKILL.read_text(encoding="utf-8"),
         SKILL.parent,
     )
+    check_support_reference_closure(
+        errors,
+        SKILL.parent,
+        SKILL.read_text(encoding="utf-8"),
+    )
     check_type_counts(errors, ROOT)
     check_high_level_reference(errors, HIGH_LEVEL_REFERENCE.read_text(encoding="utf-8"))
     check_onboarding_trust_boundary(
@@ -558,6 +786,8 @@ def main() -> int:
     )
     check_line_dark_skin(errors, LINE_DARK_EXAMPLE.read_text(encoding="utf-8"))
     check_routing_surfaces(errors, ROOT)
+    check_scanner_mirror_fixture(errors)
+    check_hermes_install_surface(errors, ROOT)
     if errors:
         print("FAIL docs sync")
         for error in errors:
@@ -565,9 +795,11 @@ def main() -> int:
         return 1
     print(
         "OK docs sync: description hooks, gallery reachability, README tree, "
-        "reference links, packaged support files, routing surfaces, manifest descriptions, "
+        "reference links, packaged support files, bundle-graph closure, routing surfaces, "
+        "manifest descriptions, "
         "Factory install contract, type-count routing, High-Level invariants, "
-        "onboarding trust boundary, Line dark-skin contract"
+        "onboarding trust boundary, Line dark-skin contract, scanner mirror pin, "
+        "Hermes install surface"
     )
     return 0
 

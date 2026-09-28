@@ -157,6 +157,14 @@ Kiro copies imported skills into `.kiro/skills/` for a workspace or `~/.kiro/ski
 
 **OpenCode:** Copy or symlink `skills/diagram-design/` to `.opencode/skills/diagram-design` in a project or `~/.config/opencode/skills/diagram-design` globally. OpenCode has no Diagram Design marketplace package; copied installs update only when you replace the directory from a newer checkout.
 
+**Hermes:** Hermes Agent reads the shared Agent Skills convention rather than a marketplace package, so install the skill directory itself at:
+
+```text
+~/.agents/skills/diagram-design
+```
+
+Copy or symlink `skills/diagram-design/` there — the [editable install](#editable-install) block below already creates exactly that link. Hermes bundles *strictly*: it scans the packaged Markdown and fetches every support path it finds **before** installing any part of the skill, so one reference to a file the package does not ship aborts the whole install. `python3 scripts/verify-docs-sync.py` gates that graph in CI in both directions — every path reachable from `SKILL.md` exists, and every shipped support file is reachable — which is what keeps a Hermes install from failing halfway. There is no Hermes marketplace package, so a copied install updates when you replace the directory from a newer checkout, and a symlinked checkout updates with `git pull`.
+
 > **One-time migration:** an existing standalone `npx skills add` copy will not start following the Codex marketplace automatically. Remove that standalone copy, then use the Codex marketplace commands above. Likewise, uninstall a personal Cowork copy and reinstall Diagram Design from your organization's marketplace. Future marketplace version bumps then flow through each client's native update path.
 
 ### Editable install
@@ -369,7 +377,7 @@ Progressive disclosure. `SKILL.md` routes behavior first when needed, then layou
 
 ```
 diagram-design/
-├── .agents/plugins/marketplace.json — Codex marketplace catalog
+├── .agents/plugins/marketplace.json — shared Agent Skills catalog (Codex + Hermes)
 ├── .claude-plugin/                  — Claude marketplace + plugin manifest
 ├── .codex-plugin/                   — Codex plugin manifest
 ├── .factory-plugin/                 — Factory Droid marketplace + plugin manifest
@@ -456,7 +464,8 @@ diagram-design/
 │   └── fixtures/
 │       ├── sample-flowchart.mmd
 │       ├── sample-readme-with-mermaid.md
-│       └── sample-adversarial.mmd
+│       ├── sample-adversarial.mmd
+│       └── hermes-support-scanner.json — pinned strict-bundler scanner behavior
 ├── docs/cookbook.md                 — operator recipes for editable installs and common tasks
 ├── docs/adr/                        — short records of settled design decisions
 ├── docs/screenshots/                — full-resolution images + source-digest manifest.json
@@ -481,7 +490,7 @@ behavior, resource caps, named failures, and reference/command wiring.
 
 Label placement is gated geometrically: `python3 scripts/verify-geometry.py --all` fails CI when a label mask overlaps a node declared later in the document, because the node fill would clip the text at render time. `python3 scripts/test-verify-geometry.py` keeps that checker honest in both directions.
 Treemaps get a second geometric gate, because their whole claim is that area *is* the encoding: `python3 scripts/verify-treemap.py --all` fails CI when a cell's share of the drawn area doesn't match the value printed inside it, or when a label overruns the cell it names. It measures area error as a *relative* figure — an absolute one passes exactly the small cells most likely to be wrong. `python3 scripts/test-verify-treemap.py` keeps it honest in both directions.
-Docs and routing surfaces are themselves gated: `python3 scripts/verify-docs-sync.py` fails CI if the SKILL.md description loses a type's lexical hook, the gallery can't reach a shipped example, the README tree names a file that doesn't exist, a relative reference link is broken, a scanner-visible support path is not shipped inside the skill package, or any command/prompt surface drifts from its routed reference. `python3 scripts/test-verify-docs-sync.py` exercises those newer checks adversarially, including the strict-bundler behavior used by Hermes Agent. The skill also ships `skills/diagram-design/scripts/self_check.py` — a distilled output checker installed agents can run on their own generated diagrams; `python3 scripts/test-self-check.py` keeps it honest. Settled design decisions (why one pinned controller, why patterns never add types, the autoplay policy, the SKILL.md byte cap, why label placement is verified geometrically, and why client profiles use marker-first resolution) live as short ADRs in `docs/adr/` — read them before relitigating one, add one when you settle a new policy.
+Docs and routing surfaces are themselves gated: `python3 scripts/verify-docs-sync.py` fails CI if the SKILL.md description loses a type's lexical hook, the gallery can't reach a shipped example, the README tree names a file that doesn't exist, a relative reference link is broken, a scanner-visible support path is not shipped inside the skill package, a packaged support file is unreachable from `SKILL.md`, the mirrored strict-bundler scanner drifts from its pinned fixture, the Hermes install surfaces go missing, or any command/prompt surface drifts from its routed reference. The closure check runs in both directions on purpose: a bundler scans each Markdown file it installs, so a path named only by a reference is still fetched, and a shipped file nobody names is never fetched at all. `python3 scripts/test-verify-docs-sync.py` exercises those newer checks adversarially, including the strict-bundler behavior used by Hermes Agent. The skill also ships `skills/diagram-design/scripts/self_check.py` — a distilled output checker installed agents can run on their own generated diagrams; `python3 scripts/test-self-check.py` keeps it honest. Settled design decisions (why one pinned controller, why patterns never add types, the autoplay policy, the SKILL.md byte cap, why label placement is verified geometrically, why client profiles use marker-first resolution, and why Hermes is gated through the Agent Skills contract rather than a native manifest) live as short ADRs in `docs/adr/` — read them before relitigating one, add one when you settle a new policy.
 
 All pull requests and pushes are automatically validated across Linux, Windows, and macOS runners via GitHub Actions CI (`.github/workflows/ci.yml`).
 

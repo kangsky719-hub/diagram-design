@@ -69,6 +69,8 @@ If the import fails, surface this exact instruction to the user and stop:
 
 Don't auto-install. The user asked for one feature, not a system change.
 
+For a full readiness report — runtime, resolved installation, and command routing in one pass — load [`references/doctor.md`](doctor.md) instead of checking dependencies one at a time.
+
 ### Rasterize
 
 Write the snippet below to a temp file and run it with `python <tmp.py> <src.html> <out.png>`:

@@ -30,6 +30,8 @@ Use one primary pattern per figure. A second pattern may supply at most one supp
 
 **Nearest visual type:** **Data flow** by default; use **Process** when service stages, rather than sources, dominate.
 
+**Shipped example:** [`assets/example-queue-animated.html`](../assets/example-queue-animated.html) — this pattern with optional motion.
+
 ## 2. Stage framework with semantic slots
 
 **Selection triggers:** A lifecycle or operating model repeats the same semantic questions across stages, commonly Question, Input, Governance, and Output. Cross-stage comparability matters more than message timing.
@@ -72,6 +74,8 @@ Use one primary pattern per figure. A second pattern may supply at most one supp
 
 **Nearest visual type:** **Flowchart** for ordered decision logic; use **Sequence** only when messages between actors and time are also load-bearing.
 
+**Shipped example:** [`assets/example-policy-trace-animated.html`](../assets/example-policy-trace-animated.html) — this pattern with optional motion.
+
 ## 5. Secure paved road
 
 **Selection triggers:** A supported architecture creates a bounded route from intake/build to deployment; trust boundaries, privileged moments, permitted ingress, forbidden ingress, and approved versus blocked deploy paths are the point.
@@ -85,6 +89,8 @@ Use one primary pattern per figure. A second pattern may supply at most one supp
 **Static fallback:** Render every boundary and both permitted/forbidden routes. Blocked paths must visibly stop before entry or deployment.
 
 **Nearest visual type:** **Architecture**.
+
+**Shipped example:** [`assets/example-paved-road-animated.html`](../assets/example-paved-road-animated.html) — this pattern with optional motion.
 
 ## 6. Governance / control catalog
 

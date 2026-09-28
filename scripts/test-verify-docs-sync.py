@@ -596,10 +596,244 @@ diagram-design/
             raise AssertionError(f"variant with missing parent not caught: {errs}")
         print("OK gallery: variant with missing parent caught")
 
+    # --- bundle-graph closure, derived runtime set, mirror pin (ADR 0010) ---
+    with tempfile.TemporaryDirectory() as temp_dir:
+        skill = Path(temp_dir) / "skills/diagram-design"
+        (skill / "references").mkdir(parents=True)
+        (skill / "assets").mkdir()
+        (skill / "scripts").mkdir()
+        (skill / "assets/keep.html").write_text("<!doctype html>\n", encoding="utf-8")
+
+        def write_reference(name: str, body: str) -> None:
+            (skill / "references" / name).write_text(body, encoding="utf-8")
+
+        skill_markdown = "Load [a](references/a.md) first.\n"
+        write_reference("a.md", "Open `assets/keep.html`.\n")
+
+        # 1. A package whose every file is reachable and present reports nothing.
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if errors:
+            raise AssertionError(f"consistent bundle graph failed: {errors}")
+        print("OK closure: consistent bundle graph passes")
+
+        # 2. A path named only by a reference is still fetched at install time.
+        write_reference("a.md", "Open `assets/keep.html` and `assets/ghost.html`.\n")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        expected = (
+            "references/a.md exposes missing packaged support file "
+            "'assets/ghost.html'; strict skill bundlers scan installed Markdown "
+            "too and will abort installation"
+        )
+        if errors != [expected]:
+            raise AssertionError(f"second-level missing file not reported: {errors}")
+        print("OK closure: missing file named only by a reference is caught")
+
+        # 3. The walk is transitive, not one level deep.
+        write_reference("a.md", "Open `assets/keep.html`, then [b](references/b.md).\n")
+        write_reference("b.md", "Finally `assets/deep-ghost.html`.\n")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if len(errors) != 1 or not errors[0].startswith(
+            "references/b.md exposes missing packaged support file 'assets/deep-ghost.html'"
+        ):
+            raise AssertionError(f"third-level missing file not reported: {errors}")
+        print("OK closure: walk reaches the third level")
+
+        # 4. An unsafe path is rejected wherever it is named, with its referrer.
+        write_reference("b.md", "See [x](references/%2e%2e/secrets.md).\n")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        expected = (
+            "references/b.md exposes unsafe packaged support path "
+            "'references/../secrets.md'"
+        )
+        if errors != [expected]:
+            raise AssertionError(f"second-level unsafe path not reported: {errors}")
+        print("OK closure: unsafe path is attributed to its referrer")
+
+        # 5. A cycle between references terminates instead of recursing forever.
+        write_reference("a.md", "Open `assets/keep.html`, then [b](references/b.md).\n")
+        write_reference("b.md", "Back to [a](references/a.md).\n")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if errors:
+            raise AssertionError(f"reference cycle reported errors: {errors}")
+        print("OK closure: reference cycle terminates")
+
+        # 6. SKILL.md's own level stays the other check's job — no double report.
+        errors = []
+        verify.check_support_reference_closure(
+            errors, skill, skill_markdown + "Also `assets/ghost.html`.\n"
+        )
+        if errors:
+            raise AssertionError(f"SKILL.md level was double-reported: {errors}")
+        print("OK closure: SKILL.md level is not double-reported")
+
+        # 7. A shipped file nobody names is never fetched, so it is an error.
+        (skill / "assets/orphan.html").write_text("<!doctype html>\n", encoding="utf-8")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if len(errors) != 1 or not errors[0].startswith(
+            "packaged support file 'assets/orphan.html' is unreachable from SKILL.md"
+        ):
+            raise AssertionError(f"unreachable packaged file not reported: {errors}")
+        (skill / "assets/orphan.html").unlink()
+        print("OK closure: unreachable packaged file is caught")
+
+        # 8. The runtime set is read off disk, so a new helper is covered at once.
+        (skill / "scripts/extra.py").write_text("# helper\n", encoding="utf-8")
+        derived = verify.packaged_runtime_files(skill)
+        if "scripts/extra.py" not in derived:
+            raise AssertionError(f"derived runtime set missed a new helper: {sorted(derived)}")
+        errors = []
+        verify.check_packaged_support_references(errors, skill_markdown, skill)
+        if not any(
+            "does not expose required packaged runtime file 'scripts/extra.py'" in error
+            for error in errors
+        ):
+            raise AssertionError(f"unexposed new helper was not reported: {errors}")
+        (skill / "scripts/extra.py").unlink()
+        print("OK runtime set: derived from the package, not a hand-written list")
+
+        # 9. A build artifact is not a shipped file: running any packaged script
+        #    leaves a __pycache__, and that must not read as an unshipped orphan.
+        cache = skill / "scripts/__pycache__"
+        cache.mkdir()
+        (cache / "self_check.cpython-311.pyc").write_bytes(b"\x00")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if errors:
+            raise AssertionError(f"build artifact treated as a shipped file: {errors}")
+        if any(
+            "__pycache__" in name for name in verify.packaged_support_files(skill)
+        ):
+            raise AssertionError("packaged_support_files returned a build artifact")
+        print("OK closure: build artifacts are not part of the bundle graph")
+
+    # The shipped fixture must describe the mirror this repository actually runs.
+    errors = []
+    verify.check_scanner_mirror_fixture(errors)
+    if errors:
+        raise AssertionError(f"shipped scanner mirror fixture failed: {errors}")
+    print("OK mirror pin: shipped fixture matches the mirrored scanner")
+
+    original_fixture = verify.SCANNER_MIRROR_FIXTURE
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture_path = Path(temp_dir) / "fixture.json"
+            verify.SCANNER_MIRROR_FIXTURE = fixture_path
+            base = {
+                "source": verify.SCANNER_MIRROR_SOURCE,
+                "mirrored_on": verify.SCANNER_MIRROR_MIRRORED_ON,
+                "cases": [
+                    {
+                        "name": "code span",
+                        "markdown": "Copy `assets/template.html`.",
+                        "visible": ["assets/template.html"],
+                    }
+                ],
+            }
+
+            fixture_path.write_text(json.dumps(base), encoding="utf-8")
+            errors = []
+            verify.check_scanner_mirror_fixture(errors)
+            if errors:
+                raise AssertionError(f"valid temporary fixture failed: {errors}")
+
+            drifted = json.loads(json.dumps(base))
+            drifted["cases"][0]["visible"] = ["assets/template-dark.html"]
+            fixture_path.write_text(json.dumps(drifted), encoding="utf-8")
+            errors = []
+            verify.check_scanner_mirror_fixture(errors)
+            if len(errors) != 1 or "scanner mirror drifted from the fixture" not in errors[0]:
+                raise AssertionError(f"mirror drift was not reported: {errors}")
+            print("OK mirror pin: drift between regex and fixture is caught")
+
+            stale = json.loads(json.dumps(base))
+            stale["mirrored_on"] = "1999-01-01"
+            fixture_path.write_text(json.dumps(stale), encoding="utf-8")
+            errors = []
+            verify.check_scanner_mirror_fixture(errors)
+            if len(errors) != 1 or "'mirrored_on'" not in errors[0]:
+                raise AssertionError(f"stale provenance was not reported: {errors}")
+            print("OK mirror pin: provenance must be re-dated with the regex")
+
+            empty = json.loads(json.dumps(base))
+            empty["cases"] = []
+            fixture_path.write_text(json.dumps(empty), encoding="utf-8")
+            errors = []
+            verify.check_scanner_mirror_fixture(errors)
+            if len(errors) != 1 or "non-empty 'cases'" not in errors[0]:
+                raise AssertionError(f"empty fixture was not reported: {errors}")
+
+            fixture_path.unlink()
+            errors = []
+            verify.check_scanner_mirror_fixture(errors)
+            if len(errors) != 1 or "fixture is missing" not in errors[0]:
+                raise AssertionError(f"missing fixture was not reported: {errors}")
+            print("OK mirror pin: an absent or empty fixture is not a pass")
+    finally:
+        verify.SCANNER_MIRROR_FIXTURE = original_fixture
+
+    # --- Hermes install surfaces (ADR 0010) ---------------------------------
+    catalog_line = (
+        "├── .agents/plugins/marketplace.json — shared Agent Skills catalog "
+        "(Codex + Hermes)"
+    )
+    readme_body = (
+        "## Install\n\n**Hermes:** install the skill directory at "
+        "`~/.agents/skills/diagram-design`.\n\n```\n" + catalog_line + "\n```\n"
+    )
+
+    def run_hermes_check(readme: str, onboarding: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "README.md").write_text(readme, encoding="utf-8")
+            onboarding_path = root / "skills/diagram-design/references/onboarding.md"
+            onboarding_path.parent.mkdir(parents=True)
+            onboarding_path.write_text(onboarding, encoding="utf-8")
+            found: list[str] = []
+            verify.check_hermes_install_surface(found, root)
+            return found
+
+    good_onboarding = "**Hermes:**\n\n1. `~/.agents/skills/<skill-name>/`\n"
+    errors = run_hermes_check(readme_body, good_onboarding)
+    if errors:
+        raise AssertionError(f"complete Hermes surfaces failed: {errors}")
+    print("OK Hermes surface: documented install path and skill root pass")
+
+    errors = run_hermes_check(
+        readme_body.replace("**Hermes:**", "Hermes:"), good_onboarding
+    )
+    if len(errors) != 1 or "no Hermes install section" not in errors[0]:
+        raise AssertionError(f"missing Hermes install section not reported: {errors}")
+
+    errors = run_hermes_check(
+        readme_body.replace("`~/.agents/skills/diagram-design`", "somewhere"),
+        good_onboarding,
+    )
+    if len(errors) != 1 or "skill root it installs into" not in errors[0]:
+        raise AssertionError(f"unnamed Hermes skill root not reported: {errors}")
+
+    errors = run_hermes_check(
+        readme_body.replace(" (Codex + Hermes)", " (Codex)"), good_onboarding
+    )
+    if len(errors) != 1 or "without naming Hermes" not in errors[0]:
+        raise AssertionError(f"single-consumer catalog line not reported: {errors}")
+    print("OK Hermes surface: a catalog described as one host's file is caught")
+
+    errors = run_hermes_check(readme_body, "**Codex:**\n\n1. nothing here\n")
+    if len(errors) != 1 or "omits Hermes" not in errors[0]:
+        raise AssertionError(f"missing onboarding entry not reported: {errors}")
+    print("OK Hermes surface: missing skill-root resolution is caught")
+
     print(
         "PASS: docs sync checks references, strict-bundler packaging, routing surfaces, "
         "Factory install contract, type-count routing, High-Level invariants, "
-        "and gallery guards (parent/variant model)"
+        "gallery guards (parent/variant model), bundle-graph closure, derived runtime "
+        "set, scanner mirror pin, and Hermes install surfaces"
     )
     return 0
 

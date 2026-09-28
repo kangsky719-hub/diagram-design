@@ -1,0 +1,23 @@
+# ADR 0010 — Hermes Agent rides the Agent Skills contract, and that contract is gated
+
+**Status:** accepted (v2.6.12)
+
+## Context
+
+Hermes Agent's strict skill bundler already constrained this package: the support-file scanner mirrored in `scripts/verify-docs-sync.py` exists because a strict bundler resolves every support path a skill's Markdown names *before* installing any part of the skill, so one missing file aborts the install. But Hermes appeared nowhere else. It had no install section, no entry in `references/onboarding.md`'s per-host skill-root resolution, and no ADR — a host that shaped the package while being invisible to anyone reading the docs. Three consequences followed from that invisibility.
+
+The mirrored regex carried no provenance: no source, no mirroring date, and no fixture, so an upstream change to the scanner produced no signal here at all. The gate also scanned only `SKILL.md`, while a bundler scans each Markdown file it installs in turn — which left the second level unchecked. It was: eleven `assets/example-*-extended*.html` files were documented as shipped and had never existed, seventeen repository-checkout helpers were written as packaged paths, and `references/doctor.md` — the entire `/doctor` procedure — was reachable from no packaged file, so a strict bundler never fetched it. Finally, the catalog at `.agents/plugins/marketplace.json` was named and documented as Codex's, though `.agents/` is the cross-host convention Hermes reads too, which made a Codex-motivated edit able to change a Hermes install with nothing saying so.
+
+## Decision
+
+Hermes is a first-class *consumer* of the Agent Skills contract and not a native-manifest host. It receives no plugin manifest and does not join ADR 0008's synchronized manifest set or the version gate; it installs from the skill directory, documented in README's Install section and in `onboarding.md`'s resolution list, and `check_hermes_install_surface` fails CI if either surface loses it.
+
+What is gated instead is the bundler contract, in both directions. `check_support_reference_closure` walks the transitive closure of scanner-visible support paths from `SKILL.md` through every packaged Markdown file it reaches: a path any scanned file names must be a safe packaged file, and a packaged support file no scanned file names is an error too, because a bundler installs only what it can scan. A path written `<repo-root>/scripts/…` is the deliberate escape hatch for repository-checkout helpers and stays invisible to the scanner.
+
+The mirror itself is pinned rather than trusted. `scripts/fixtures/hermes-support-scanner.json` records the source, the mirroring date, and the input/output pairs the regex must reproduce; `check_scanner_mirror_fixture` fails when regex and fixture disagree, and re-mirroring means changing regex, fixture, and `SCANNER_MIRROR_MIRRORED_ON` in one commit.
+
+Runtime exposure is derived, not listed. The files a host executes or copies are collected from the package by `RUNTIME_FILE_PATTERNS` and each must be named in `SKILL.md`; exemptions are explicit and explained. The shared catalog is named for its convention (`AGENTS_MARKETPLACE`), and the README tree entry must name every consumer.
+
+## Consequences
+
+Adding a strict-bundler host costs documentation and a resolution entry, not a manifest or a version bump — and it cannot be added silently, because the install surfaces are gated. Every packaged file now has to be reachable from `SKILL.md`, so shipping an example means referencing it from a reference that reaches it; a file worth shipping is worth naming. Prose that names a repository helper must use the `<repo-root>/` form, and prose that describes an unshipped variant must not spell it as a path. Adding a packaged script or template fails CI until `SKILL.md` exposes it, which is the point: the hand-maintained list this replaced stopped covering whatever was added after it was written. The scanner mirror can still fall behind upstream — a fixture pins what we believe, not what Hermes does — so the mirroring date is the honest expiry marker, and re-mirroring is a deliberate, dated act.

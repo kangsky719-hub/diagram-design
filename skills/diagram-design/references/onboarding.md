@@ -225,6 +225,11 @@ Use the installed-skill location exposed by the current agent when available. Ot
 1. The skill root exposed by an active marketplace plugin
 2. `~/.agents/skills/<skill-name>/` (user install or editable-clone link)
 
+**Hermes:**
+
+1. The skill root exposed by the active Hermes bundle
+2. `~/.agents/skills/<skill-name>/` (user install or editable-clone link)
+
 **GitHub Copilot:**
 
 1. `.github/skills/<skill-name>/`, `.agents/skills/<skill-name>/`, or `.claude/skills/<skill-name>/` (project install)

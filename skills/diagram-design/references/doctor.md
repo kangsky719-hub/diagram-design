@@ -14,7 +14,7 @@ Use two diagnostic modes:
   installation. Do not require maintainer-only repository files.
 - **Maintainer-checkout mode**: use this only when the resolved installation
   root contains `CONTRIBUTING.md`, `.github/workflows/ci.yml`, and
-  `scripts/verify-plugin-package.py`. Add the repository integrity checks below.
+  `<repo-root>/scripts/verify-plugin-package.py`. Add the repository integrity checks below.
 
 ## Inputs
 
@@ -44,11 +44,11 @@ Run all checks in this order and report each as `pass`, `warn`, or `fail`.
 
 3. Expected script presence (maintainer-checkout mode only)
 - Verify these repository scripts exist:
-  - `scripts/verify-drawio-import.py`
-  - `scripts/verify-mermaid-import.py`
-  - `scripts/verify-motion.py`
-  - `scripts/lint-skin.py`
-  - `scripts/verify-docs-sync.py`
+  - `<repo-root>/scripts/verify-drawio-import.py`
+  - `<repo-root>/scripts/verify-mermaid-import.py`
+  - `<repo-root>/scripts/verify-motion.py`
+  - `<repo-root>/scripts/lint-skin.py`
+  - `<repo-root>/scripts/verify-docs-sync.py`
 - Missing scripts are `fail` in maintainer-checkout mode.
 - In installed-skill mode, report that maintainer scripts are not applicable;
   their absence is not a warning or failure.
@@ -90,7 +90,7 @@ Always print:
 2. A checklist with one line per check:
 - `[PASS] Python 3.11.9 found at ...`
 - `[WARN] Playwright not installed ...`
-- `[FAIL] Missing scripts/verify-docs-sync.py`
+- `[FAIL] Missing <repo-root>/scripts/verify-docs-sync.py`
 
 3. A `Next actions` section only when warn/fail exists.
 
@@ -110,7 +110,7 @@ Always print:
 Doctor summary: WARN (6 pass, 2 warn, 0 fail)
 [PASS] Python 3.11.9 found at /usr/bin/python3
 [WARN] Playwright package not found in active interpreter
-[PASS] scripts/verify-drawio-import.py present
+[PASS] <repo-root>/scripts/verify-drawio-import.py present
 ...
 
 Next actions

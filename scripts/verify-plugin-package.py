@@ -31,7 +31,11 @@ MANIFEST_PATHS = {
     "Factory": Path(".factory-plugin/plugin.json"),
 }
 CLAUDE_MARKETPLACE = Path(".claude-plugin/marketplace.json")
-CODEX_MARKETPLACE = Path(".agents/plugins/marketplace.json")
+# Shared, not Codex-only: the .agents/ catalog is the cross-host Agent
+# Skills convention, read by Codex and by Hermes Agent (ADR 0010). An edit
+# here changes more than one host's install, so it is named for the
+# convention rather than for whichever consumer was documented first.
+AGENTS_MARKETPLACE = Path(".agents/plugins/marketplace.json")
 FACTORY_MARKETPLACE = Path(".factory-plugin/marketplace.json")
 SHARED_MANIFEST_FIELDS = (
     "name",
@@ -234,19 +238,19 @@ def verify_manifest_identity(manifests: dict[str, dict[str, Any]], errors: list[
 
 def verify_marketplaces(root: Path, errors: list[str]) -> None:
     claude_marketplace = load_json(root / CLAUDE_MARKETPLACE, errors)
-    codex_marketplace = load_json(root / CODEX_MARKETPLACE, errors)
+    agents_marketplace = load_json(root / AGENTS_MARKETPLACE, errors)
     factory_marketplace = load_json(root / FACTORY_MARKETPLACE, errors)
     if (
         claude_marketplace is None
-        or codex_marketplace is None
+        or agents_marketplace is None
         or factory_marketplace is None
     ):
         return
 
     claude_entry = find_plugin_entry(claude_marketplace, "Claude", errors)
-    codex_entry = find_plugin_entry(codex_marketplace, "Codex", errors)
+    agents_entry = find_plugin_entry(agents_marketplace, "Agent Skills", errors)
     factory_entry = find_plugin_entry(factory_marketplace, "Factory", errors)
-    if claude_entry is None or codex_entry is None or factory_entry is None:
+    if claude_entry is None or agents_entry is None or factory_entry is None:
         return
 
     claude_root = resolve_local_path(root, claude_entry.get("source"), "Claude plugin source", errors)
@@ -254,40 +258,48 @@ def verify_marketplaces(root: Path, errors: list[str]) -> None:
         root, factory_entry.get("source"), "Factory plugin source", errors
     )
 
-    codex_source = codex_entry.get("source")
-    if not isinstance(codex_source, dict) or codex_source.get("source") != "local":
-        errors.append("Codex plugin source must be an object with source='local'")
-        codex_root = None
+    agents_source = agents_entry.get("source")
+    if not isinstance(agents_source, dict) or agents_source.get("source") != "local":
+        errors.append("Agent Skills plugin source must be an object with source='local'")
+        agents_root = None
     else:
-        codex_root = resolve_local_path(root, codex_source.get("path"), "Codex plugin source.path", errors)
+        agents_root = resolve_local_path(
+            root, agents_source.get("path"), "Agent Skills plugin source.path", errors
+        )
 
-    policy = codex_entry.get("policy")
+    policy = agents_entry.get("policy")
     if not isinstance(policy, dict):
-        errors.append("Codex marketplace entry must include a policy object")
+        errors.append("Agent Skills marketplace entry must include a policy object")
     else:
         if policy.get("installation") != "AVAILABLE":
-            errors.append("Codex policy.installation must be 'AVAILABLE'")
+            errors.append("Agent Skills policy.installation must be 'AVAILABLE'")
         if policy.get("authentication") != "ON_INSTALL":
-            errors.append("Codex policy.authentication must be 'ON_INSTALL'")
-    if not isinstance(codex_entry.get("category"), str) or not codex_entry.get("category"):
-        errors.append("Codex marketplace entry must include a category")
+            errors.append("Agent Skills policy.authentication must be 'ON_INSTALL'")
+    if not isinstance(agents_entry.get("category"), str) or not agents_entry.get("category"):
+        errors.append("Agent Skills marketplace entry must include a category")
 
     if claude_root is not None and not (claude_root / MANIFEST_PATHS["Claude"]).is_file():
         errors.append("Claude marketplace target does not contain .claude-plugin/plugin.json")
-    if codex_root is not None and not (codex_root / MANIFEST_PATHS["Codex"]).is_file():
-        errors.append("Codex marketplace target does not contain .codex-plugin/plugin.json")
+    if agents_root is not None and not (agents_root / MANIFEST_PATHS["Codex"]).is_file():
+        errors.append(
+            "shared Agent Skills marketplace target does not contain "
+            ".codex-plugin/plugin.json"
+        )
     if factory_root is not None and not (factory_root / MANIFEST_PATHS["Factory"]).is_file():
         errors.append("Factory marketplace target does not contain .factory-plugin/plugin.json")
 
     plugin_roots = [
         plugin_root
-        for plugin_root in (claude_root, codex_root, factory_root)
+        for plugin_root in (claude_root, agents_root, factory_root)
         if plugin_root is not None
     ]
     if plugin_roots and any(plugin_root != plugin_roots[0] for plugin_root in plugin_roots[1:]):
-        errors.append("Claude, Codex, and Factory marketplaces must package the same plugin root")
+        errors.append(
+            "Claude, Agent Skills, and Factory marketplaces must package the "
+            "same plugin root"
+        )
 
-    plugin_root = codex_root or claude_root or factory_root
+    plugin_root = agents_root or claude_root or factory_root
     if plugin_root is None:
         return
     skill = plugin_root / "skills" / PLUGIN_NAME / "SKILL.md"

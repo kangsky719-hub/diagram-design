@@ -179,19 +179,19 @@ Every diagram type ships three variants: minimal light (`example-<type>.html`), 
 python3 scripts/lint-skin.py skills/diagram-design/assets/example-my-type.html
 ```
 
-New examples should be added to the gallery (`assets/index.html`) so they stay browsable.
+New examples should be added to the gallery (`assets/index.html`) so they stay browsable, **and named from a packaged Markdown file** — `SKILL.md` or a reference it reaches. Strict skill bundlers install only the paths they can scan out of the packaged Markdown, so a file registered in the gallery but named nowhere in `references/` never reaches an installed skill; `verify-docs-sync.py` reports it as unreachable (ADR 0010).
 
 Motion is opt-in. Start from `skills/diagram-design/assets/template-motion.html`, follow `references/animation.md`, and run `python3 scripts/verify-motion.py <file>` plus `python3 scripts/test-verify-motion.py`. A motion file must preserve complete no-JavaScript, reduced-motion, print, screenshot, and export states. Keep the controller byte-for-byte identical to the template; changes require updating the canonical template, example, documentation, and adversarial tests together.
 
 ## Design decisions (ADRs)
 
-Settled policies live as short records in `docs/adr/` — one pinned motion controller, semantic patterns never expanding the visual-type taxonomy, the reveal-only autoplay rule, the SKILL.md byte cap with its trigger-rich description requirement, geometric label placement being verified rather than reviewed, and plugin versions being bumped on `main` after merge rather than in PRs. Read the relevant ADR before proposing a change that touches one; when a PR settles a new policy, add an ADR in the same PR.
+Settled policies live as short records in `docs/adr/` — one pinned motion controller, semantic patterns never expanding the visual-type taxonomy, the reveal-only autoplay rule, the SKILL.md byte cap with its trigger-rich description requirement, geometric label placement being verified rather than reviewed, plugin versions being bumped on `main` after merge rather than in PRs, and Hermes Agent being supported through the gated Agent Skills contract instead of a native manifest. Read the relevant ADR before proposing a change that touches one; when a PR settles a new policy, add an ADR in the same PR.
 
 ## Adding a new diagram type
 
 1. Write `skills/diagram-design/references/type-<name>.md` — layout conventions, anti-patterns, and a worked pattern for that type. Mirror an existing reference's structure.
 2. Add the row to the selection table in `skills/diagram-design/SKILL.md` §3 **and** the type's name to the frontmatter `description` — `verify-docs-sync.py` fails if the description loses or lacks a type's lexical hook.
-3. Add the three example variants (see above) and register them in the gallery (`assets/index.html`) — `verify-docs-sync.py` fails on any shipped example the gallery can't reach.
+3. Add the three example variants (see above), register them in the gallery (`assets/index.html`), and cite them from the type reference — `verify-docs-sync.py` fails on any shipped example the gallery can't reach, and on any packaged file no packaged Markdown names.
 4. Run the full gate suite — new examples are linted automatically by `--all`.
 
 ## Changing the icon set
@@ -218,6 +218,11 @@ Documentation and wiring must stay in sync: the import references, `SKILL.md` §
 ## Documentation
 
 Most of this repo *is* documentation. When behavior changes, update the affected reference files and the README in the same PR. Loose ends here are what the verifiers and reviewers will catch.
+
+Two path conventions inside `skills/diagram-design/` exist because a strict bundler treats every path-shaped string in the packaged Markdown as a file to fetch:
+
+- **A repository-checkout helper is written `<repo-root>/scripts/<name>.py`.** The prefix is the deliberate escape hatch; a bare `scripts/<name>.py` claims the skill package ships it, and CI fails because it doesn't.
+- **A variant the package doesn't ship is never spelled as a path.** Describe it ("**Extended, light** — …"), don't name `assets/example-<type>-extended.html`, or the bundler aborts the install looking for a file that was only ever prose.
 
 ---
 
