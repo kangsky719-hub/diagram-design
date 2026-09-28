@@ -104,6 +104,26 @@ RUNTIME_EXPOSURE_EXEMPTIONS: frozenset[str] = frozenset()
 # fail depending on which step ran first.
 UNSHIPPED_ARTIFACT_DIRECTORIES = frozenset({"__pycache__"})
 UNSHIPPED_ARTIFACT_SUFFIXES = (".pyc", ".pyo", ".pyd")
+# The browsing surface: files that ship in the repository and are reached
+# through the gallery, but stay out of the strict-bundle graph on purpose.
+#
+# A path-scanning bundler fetches every path the packaged Markdown names, so
+# what the Markdown names *is* the install weight. The dark and full variants
+# of each example are 96 paths and ~1.3 MB of that, and every reference to
+# them is an inventory bullet ("same, dark skin") rather than a generation
+# input: their geometry is the light variant's, and their skin comes from
+# template-dark.html, template-full.html and style-guide.md. So they are
+# named without the assets/ prefix — the form SKILL.md's own variant table
+# uses — which keeps a strict install to the runtime set while a copy or
+# symlink install still ships all three variants (ADR 0010).
+BROWSING_SURFACE_SUFFIXES = ("-dark.html", "-full.html")
+
+
+def is_browsing_surface(target: str) -> bool:
+    """Is this packaged path a gallery variant rather than a runtime input?"""
+    return target.startswith("assets/example-") and target.endswith(
+        BROWSING_SURFACE_SUFFIXES
+    )
 
 
 def normalized(text: str) -> str:
@@ -438,7 +458,23 @@ def check_support_reference_closure(
                 "strict skill bundlers scan installed Markdown too and will "
                 "abort installation"
             )
-    unreachable = packaged_support_files(skill_directory) - set(referrers)
+    # The split has to hold in both directions, or the weight claim is false:
+    # a browsing-surface file any Markdown names is fetched by a strict
+    # bundler anyway, and nothing else may sit outside the graph.
+    for target in sorted(referrers):
+        if is_browsing_surface(target):
+            errors.append(
+                f"{referrers[target][0]} names browsing-surface file {target!r}; "
+                "the dark and full variants are reached through the gallery, not "
+                "the bundle graph, so name them without the assets/ prefix "
+                f"({target.split('/', 1)[1]!r}) or take the suffix out of "
+                "BROWSING_SURFACE_SUFFIXES and accept the install weight"
+            )
+    unreachable = {
+        target
+        for target in packaged_support_files(skill_directory) - set(referrers)
+        if not is_browsing_surface(target)
+    }
     for target in sorted(unreachable):
         errors.append(
             f"packaged support file {target!r} is unreachable from SKILL.md; "

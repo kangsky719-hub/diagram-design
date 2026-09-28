@@ -29,5 +29,5 @@ Don't mix orientations on one diagram.
 
 ## Examples
 - `assets/example-pyramid.html` — minimal light
-- `assets/example-pyramid-dark.html` — minimal dark
-- `assets/example-pyramid-full.html` — full editorial
+- `example-pyramid-dark.html` — minimal dark
+- `example-pyramid-full.html` — full editorial

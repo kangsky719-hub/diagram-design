@@ -712,6 +712,68 @@ diagram-design/
             raise AssertionError("packaged_support_files returned a build artifact")
         print("OK closure: build artifacts are not part of the bundle graph")
 
+        # 10. The browsing surface is recognised by name, and nothing else is.
+        #     assets/template-dark.html also ends in -dark.html and is a required
+        #     runtime file, so misreading it would make the gate contradict itself.
+        for target, expected in (
+            ("assets/example-bar-dark.html", True),
+            ("assets/example-bar-full.html", True),
+            ("assets/example-bar.html", False),
+            ("assets/example-loop-terminal.html", False),
+            ("assets/template-dark.html", False),
+            ("assets/template-full.html", False),
+            ("references/type-bar-dark.html", False),
+        ):
+            if verify.is_browsing_surface(target) is not expected:
+                raise AssertionError(
+                    f"is_browsing_surface({target!r}) should be {expected}"
+                )
+        print("OK browsing surface: recognised by name, templates excluded")
+
+        # 11. A browsing-surface file nobody names is not an orphan — that is
+        #     the whole point — while a light example still is.
+        (skill / "assets/example-x-dark.html").write_text("<!doctype html>\n", encoding="utf-8")
+        (skill / "assets/example-x-full.html").write_text("<!doctype html>\n", encoding="utf-8")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if errors:
+            raise AssertionError(f"unnamed browsing surface reported: {errors}")
+        (skill / "assets/example-x.html").write_text("<!doctype html>\n", encoding="utf-8")
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if len(errors) != 1 or "'assets/example-x.html' is unreachable" not in errors[0]:
+            raise AssertionError(
+                f"a light example outside the graph must still be an orphan: {errors}"
+            )
+        (skill / "assets/example-x.html").unlink()
+        print("OK browsing surface: outside the graph without being an orphan")
+
+        # 12. Naming one puts it back in every strict install, so it is an error.
+        write_reference(
+            "a.md",
+            "Open `assets/keep.html`, [b](references/b.md), and "
+            "`assets/example-x-dark.html`.\n",
+        )
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if len(errors) != 1 or "names browsing-surface file 'assets/example-x-dark.html'" not in errors[0]:
+            raise AssertionError(f"named browsing-surface file not reported: {errors}")
+        if "'example-x-dark.html'" not in errors[0]:
+            raise AssertionError(f"error does not name the fix: {errors[0]}")
+        print("OK browsing surface: re-adding the prefix is caught")
+
+        # 13. The prefix-free form is invisible to the scanner, as the fix claims.
+        write_reference(
+            "a.md",
+            "Open `assets/keep.html` and [b](references/b.md); "
+            "`example-x-dark.html` ships beside it.\n",
+        )
+        errors = []
+        verify.check_support_reference_closure(errors, skill, skill_markdown)
+        if errors:
+            raise AssertionError(f"prefix-free variant name was not invisible: {errors}")
+        print("OK browsing surface: the prefix-free form stays out of the graph")
+
     # The shipped fixture must describe the mirror this repository actually runs.
     errors = []
     verify.check_scanner_mirror_fixture(errors)
@@ -833,7 +895,7 @@ diagram-design/
         "PASS: docs sync checks references, strict-bundler packaging, routing surfaces, "
         "Factory install contract, type-count routing, High-Level invariants, "
         "gallery guards (parent/variant model), bundle-graph closure, derived runtime "
-        "set, scanner mirror pin, and Hermes install surfaces"
+        "set, browsing surface, scanner mirror pin, and Hermes install surfaces"
     )
     return 0
 

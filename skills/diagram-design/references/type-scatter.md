@@ -187,11 +187,11 @@ What each binding buys, and what it costs to omit:
 ## Examples
 
 - `assets/example-scatter.html` — minimal light
-- `assets/example-scatter-dark.html` — minimal dark
-- `assets/example-scatter-full.html` — full editorial
+- `example-scatter-dark.html` — minimal dark
+- `example-scatter-full.html` — full editorial
 - `assets/example-bubble.html` — bubble, minimal light
-- `assets/example-bubble-dark.html` — bubble, minimal dark
-- `assets/example-bubble-full.html` — bubble, full editorial
+- `example-bubble-dark.html` — bubble, minimal dark
+- `example-bubble-full.html` — bubble, full editorial
 - `assets/example-beeswarm.html` — beeswarm, minimal light
-- `assets/example-beeswarm-dark.html` — beeswarm, minimal dark
-- `assets/example-beeswarm-full.html` — beeswarm, full editorial
+- `example-beeswarm-dark.html` — beeswarm, minimal dark
+- `example-beeswarm-full.html` — beeswarm, full editorial

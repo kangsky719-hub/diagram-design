@@ -249,14 +249,14 @@ The binding contract is the slopegraph's, one level up: the path declares its ra
 ## Examples
 
 - `assets/example-line.html` — minimal light
-- `assets/example-line-dark.html` — minimal dark
-- `assets/example-line-full.html` — full editorial
+- `example-line-dark.html` — minimal dark
+- `example-line-full.html` — full editorial
 - `assets/example-slopegraph.html` — slopegraph, minimal light
-- `assets/example-slopegraph-dark.html` — slopegraph, minimal dark
-- `assets/example-slopegraph-full.html` — slopegraph, full editorial
+- `example-slopegraph-dark.html` — slopegraph, minimal dark
+- `example-slopegraph-full.html` — slopegraph, full editorial
 - `assets/example-ridgeline.html` — ridgeline, minimal light
-- `assets/example-ridgeline-dark.html` — ridgeline, minimal dark
-- `assets/example-ridgeline-full.html` — ridgeline, full editorial
+- `example-ridgeline-dark.html` — ridgeline, minimal dark
+- `example-ridgeline-full.html` — ridgeline, full editorial
 - `assets/example-bump.html` — bump chart, minimal light
-- `assets/example-bump-dark.html` — bump chart, minimal dark
-- `assets/example-bump-full.html` — bump chart, full editorial
+- `example-bump-dark.html` — bump chart, minimal dark
+- `example-bump-full.html` — bump chart, full editorial

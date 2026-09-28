@@ -132,5 +132,5 @@ The minimal examples use the full 1000×520 canvas. The full-editorial example p
 ## Examples
 
 - `assets/example-polar.html` — minimal light.
-- `assets/example-polar-dark.html` — minimal dark with the same dataset and geometry.
-- `assets/example-polar-full.html` — full editorial with three unequal summary cards and unchanged chart geometry.
+- `example-polar-dark.html` — minimal dark with the same dataset and geometry.
+- `example-polar-full.html` — full editorial with three unequal summary cards and unchanged chart geometry.

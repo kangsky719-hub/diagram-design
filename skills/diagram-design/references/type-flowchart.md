@@ -19,5 +19,5 @@
 
 ## Examples
 - `assets/example-flowchart.html` — minimal light
-- `assets/example-flowchart-dark.html` — minimal dark
-- `assets/example-flowchart-full.html` — full editorial
+- `example-flowchart-dark.html` — minimal dark
+- `example-flowchart-full.html` — full editorial

@@ -17,5 +17,5 @@
 
 ## Examples
 - `assets/example-state.html` — minimal light
-- `assets/example-state-dark.html` — minimal dark
-- `assets/example-state-full.html` — full editorial
+- `example-state-dark.html` — minimal dark
+- `example-state-full.html` — full editorial
